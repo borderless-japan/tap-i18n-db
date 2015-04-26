@@ -60,21 +60,30 @@ share.i18nCollectionExtensions = (obj) ->
 
   return obj
 
-TAPi18n.subscribe = ->
+TAPi18n.subscribe = (name) ->
+  args = new Array(arguments.length)
+  for i in [0..arguments.length-1]
+    args[i] = arguments[i]
+  args.unshift null
+  TAPi18n.subscribeWithConnection.apply @, args
+
+TAPi18n.subscribeWithConnection = (connection, name) ->
+# TAPi18n.subscribe = ->
   local_session = new ReactiveDict
   local_session.set("ready", false)
-  # connection ?= Meteor
+  connection ?= Meteor
 
-  if typeof arguments[0] is 'string'
-    name = arguments[0]
-    shift = 1
-  else
-    connection = arguments[0] ? Meteor
-    name = arguments[1]
-    shift = 2
+  # if typeof arguments[0] is 'string'
+  #   name = arguments[0]
+  #   shift = 1
+  # else
+  #   connection = arguments[0] ? Meteor
+  #   name = arguments[1]
+  #   shift = 2
 
   # parse arguments
-  params = Array.prototype.slice.call(arguments, shift)
+  # params = Array.prototype.slice.call(arguments, shift)
+  params = Array.prototype.slice.call(arguments, 2)
   callbacks = {}
   if params.length
     lastParam = params[params.length - 1]
