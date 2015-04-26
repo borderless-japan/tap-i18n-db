@@ -1,6 +1,6 @@
 TAPi18n.Collection = (name, options={}) ->
   # Set the transform option
-  if Meteor.isClient
+  if Meteor.isClient and !options.noClientTransform
     original_transform = options.transform or (doc) -> doc
     options.transform = (doc) ->
       share.i18nCollectionTransform(original_transform(doc), collection)
