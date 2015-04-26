@@ -60,12 +60,21 @@ share.i18nCollectionExtensions = (obj) ->
 
   return obj
 
-TAPi18n.subscribe = (name) ->
+TAPi18n.subscribe = ->
   local_session = new ReactiveDict
   local_session.set("ready", false)
+  # connection ?= Meteor
+
+  if typeof arguments[0] is 'string'
+    name = arguments[0]
+    shift = 1
+  else
+    connection = arguments[0] ? Meteor
+    name = arguments[1]
+    shift = 2
 
   # parse arguments
-  params = Array.prototype.slice.call(arguments, 1)
+  params = Array.prototype.slice.call(arguments, shift)
   callbacks = {}
   if params.length
     lastParam = params[params.length - 1]
@@ -102,9 +111,9 @@ TAPi18n.subscribe = (name) ->
       lang_tag = TAPi18n.getLanguage()
 
       subscription =
-        Meteor.subscribe.apply @, removeTrailingUndefs [].concat(name, params, lang_tag, callbacks)
+        connection.subscribe.apply connection, removeTrailingUndefs [].concat(name, params, lang_tag, callbacks)
 
-      # if the subscription is already ready: 
+      # if the subscription is already ready:
       local_session.set("ready", subscription.ready())
 
   # If TAPi18n is called in a computation, to maintain Meteor.subscribe
@@ -115,7 +124,7 @@ TAPi18n.subscribe = (name) ->
   if currentComputation?
     # If TAPi18n.subscribe was called in a computation, call subscribe in a
     # non-reactive context, but make sure that if the computation is getting
-    # invalidated also the subscription computation 
+    # invalidated also the subscription computation
     # (invalidations are allowed up->bottom but not bottom->up)
     Deps.onInvalidate ->
       subscription_computation.invalidate()
