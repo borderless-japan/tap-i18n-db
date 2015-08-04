@@ -60,14 +60,25 @@ share.i18nCollectionExtensions = (obj) ->
 
   return obj
 
+toArray = (as) ->
+  args = new Array(as.length)
+  for i in [0...as.length]
+    args[i] = as[i]
+  args
+
 TAPi18n.subscribe = (name) ->
-  args = new Array(arguments.length)
-  for i in [0..arguments.length-1]
-    args[i] = arguments[i]
+  args = toArray arguments
   args.unshift null
   TAPi18n.subscribeWithConnection.apply @, args
 
 TAPi18n.subscribeWithConnection = (connection, name) ->
+  args = toArray arguments
+  args.splice 1, 0, null
+  TAPi18n.subscribeWithConnectionCached.apply @, args
+
+TAPi18n.caches = {}
+
+TAPi18n.subscribeWithConnectionCached = (connection, cacheId, name) ->
 # TAPi18n.subscribe = ->
   local_session = new ReactiveDict
   local_session.set("ready", false)
@@ -83,7 +94,7 @@ TAPi18n.subscribeWithConnection = (connection, name) ->
 
   # parse arguments
   # params = Array.prototype.slice.call(arguments, shift)
-  params = Array.prototype.slice.call(arguments, 2)
+  params = Array.prototype.slice.call(arguments, 3)
   callbacks = {}
   if params.length
     lastParam = params[params.length - 1]
@@ -114,16 +125,34 @@ TAPi18n.subscribeWithConnection = (connection, name) ->
   subscription = null
   subscription_computation = null
   subscribe = ->
+    if cacheId
+      hash = name+'-'+cacheId
+      man = TAPi18n.caches[hash]
+      unless man?
+        Tracker.nonreactive ->
+          man = new SubsManager subscribe: _.bind connection.subscribe, connection
+          TAPi18n.caches[hash] = man
+
+          Tracker.autorun =>
+            lang = TAPi18n.getLanguage()
+            # console.log ['search lang clear']
+            man.clear()
+
     # subscription_computation, depends on TAPi18n.getLanguage(), to
     # resubscribe once the language gets changed.
     subscription_computation = Deps.autorun () ->
       lang_tag = TAPi18n.getLanguage()
 
-      subscription =
-        connection.subscribe.apply connection, removeTrailingUndefs [].concat(name, params, lang_tag, callbacks)
+      subargs = removeTrailingUndefs [].concat(name, params, lang_tag, callbacks)
+      if cacheId
+        # console.log [man, subargs]
+        subscription = man.subscribe.apply man, subargs
+        subscription.manager = man
+      else
+        subscription = connection.subscribe.apply connection, subargs
 
       # if the subscription is already ready:
-      local_session.set("ready", subscription.ready())
+      local_session.set("ready", subscription?.ready())
 
   # If TAPi18n is called in a computation, to maintain Meteor.subscribe
   # behavior (which never gets invalidated), we don't want the computation to
