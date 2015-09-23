@@ -47,7 +47,8 @@ commonCollectionExtensions = (obj) ->
     throwError new Meteor.Error(400, "TAPi18n is not supported"), attempted_operation, callback
 
   isSupportedLanguage = (lang, attempted_operation, callback) ->
-    if lang in TAPi18n.conf.supported_languages
+    supported_languages = TAPi18n.conf?.supported_languages ? ["en", "ja", "ko", "zh-TW"]
+    if lang in supported_languages
       return
 
     throwError new Meteor.Error(400, "Not supported language: #{lang}"), attempted_operation, callback
